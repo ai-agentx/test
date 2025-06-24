@@ -7,6 +7,7 @@ agent test
 ## Reference
 
 - [autogen](https://github.com/microsoft/autogen)
+- [awesome-agent-quickstart](https://github.com/ababdotai/awesome-agent-quickstart)
 - [camel](https://github.com/camel-ai/camel)
 - [crewai](https://github.com/crewAIInc/crewAI)
 - [drivex](https://github.com/ai-flowx/drivex)
