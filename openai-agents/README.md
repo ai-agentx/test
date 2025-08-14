@@ -4,7 +4,7 @@
 
 ```bash
 python -m venv .venv
-source .venv/Scripts/activate
+source .venv/bin/activate
 
 pip install -r requirements.txt
 npm install -g @modelcontextprotocol/server-filesystem
