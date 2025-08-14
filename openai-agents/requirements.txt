@@ -1,0 +1,5 @@
+fastmcp
+openai-agents
+pytest
+pytest-asyncio
+python-dotenv
