@@ -15,5 +15,5 @@ agent test
 - [evogit](https://github.com/BillHuang2001/evogit)
 - [langchain](https://github.com/langchain-ai/langchain)
 - [metagpt](https://github.com/FoundationAgents/MetaGPT)
-- [openai-agents-python](https://github.com/openai/openai-agents-python)
+- [openai-agents](https://github.com/openai/openai-agents-python)
 - [openmanus](https://github.com/FoundationAgents/OpenManus)
