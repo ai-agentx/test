@@ -17,3 +17,4 @@ agent test
 - [metagpt](https://github.com/FoundationAgents/MetaGPT)
 - [openai-agents](https://github.com/openai/openai-agents-python)
 - [openmanus](https://github.com/FoundationAgents/OpenManus)
+- [pydantic](https://github.com/pydantic/pydantic-ai)
