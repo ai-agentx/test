@@ -13,7 +13,7 @@ export OPENAI_API_KEY=sk-1234
 export OPENAI_API_BASE_URL=http://127.0.0.1:4000
 export OPENAI_MODEL=gemini-2.5
 
-python stdio_test.py
+python helloworld.py
 ```
 
 ### Reference
