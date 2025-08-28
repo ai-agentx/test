@@ -12,48 +12,57 @@ cd autogen
 pip install -r requirements.txt
 ```
 
-2. Set up environment:
+2. Install Node.js MCP filesystem server:
+```bash
+npm install -g @modelcontextprotocol/server-filesystem
+```
+
+3. Set up environment:
 ```bash
 cp env.py.example env.py
 ```
 
 Edit `env.py` with your settings:
 ```python
-# OpenAI API configurations
-OPENAI_API_KEY=your-api-key-here
-OPENAI_API_BASE=https://api.openai.com/v1  # Optional: for API proxies
+import os
+
+os.environ["OPENAI_API_BASE"] = "https://api.openai.com/v1"
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+os.environ["OPENAI_MODEL"] = "gpt-4o"
+os.environ["OPENAI_MODEL_FAMILY"] = "openai"
 ```
 
-3. Run your first multi-agent conversation:
+4. Run the MCP-enabled agent:
 ```bash
 python helloworld.py
 ```
 
-## 🚀 Available Examples
+## 🚀 Available Example
 
-1. `helloworld.py` - Basic two-agent conversation
-   - Learn the fundamentals of AutoGen
-   - See how agents interact with each other
-   - Understand basic agent configuration
-
-2. `team.py` - Multi-agent team collaboration
-   - Create a team of specialized agents
-   - Implement group chat and task delegation
-   - Handle complex problem-solving scenarios
+`helloworld.py` - MCP-enabled agent with filesystem and weather tools
+- Demonstrates proper MCP server integration using openai-agents framework
+- Tests filesystem tools (list files, read directories) and weather forecasting
+- Shows clean output without SSL tracing noise
+- Runs specific demo tasks and exits (non-interactive)
+- Perfectexample of connecting external tools to AI agents via MCP
 
 ## 💡 Key Features
 
-- **Multi-Agent System**: Create multiple agents with different roles
-- **Agent Communication**: Enable natural conversations between agents
-- **Web Capabilities**: Agents can browse and analyze web content
-- **Flexible Configuration**: Easy to customize agent behaviors
-- **Error Recovery**: Built-in error handling and conversation recovery
+- **MCP Server Integration**: Connect external tools via Model Context Protocol
+- **Filesystem Access**: Read files, list directories, and analyze file contents
+- **Weather Information**: Get weather forecasts for any location
+- **Clean Agent Framework**: Uses openai-agents for proper MCP integration
+- **Flexible Configuration**: Environment-based model and API configuration
+- **Multi-Model Support**: Works with OpenAI, Claude, and other model families
+- **Error Recovery**: Built-in error handling and clean output
 
 ## 🤝 Next Steps
-- Explore the examples in order of complexity
-- Read the comments in each example for detailed explanations
-- Try modifying the examples to understand the concepts better
+- Run `helloworld.py` to see MCP integration in action
+- Modify the `env.py` file to test different models and APIs
+- Read the comments in the example for detailed explanations
+- Explore the [openai-agents documentation](https://github.com/openai/openai-agents-python) for advanced MCP usage
 - Check out the [AutoGen documentation](https://microsoft.github.io/autogen/stable/reference/index.html) for more details
+- Try creating your own MCP servers for custom tool integration
 
 ## 📚 Additional Resources
 
@@ -66,11 +75,25 @@ python helloworld.py
    - Check if your API key is correctly set in `env.py`
    - Verify your API key has sufficient credits
 
-2. If web browsing fails:
-   - Ensure you installed with `pip install 'autogen-ext[web-surfer]'`
-   - Check your internet connection
-   - Verify the website is accessible
+2. If MCP server connection fails:
+   - Ensure Node.js is installed: `node --version`
+   - Verify filesystem server is installed: `npm list -g @modelcontextprotocol/server-filesystem`
+   - Check that the weather MCP server is available in `../openai-agents/mcp-weather.py`
 
 3. For model-specific errors:
    - Try using a different model from your config list
    - Check if your API key has access to the requested model
+   - Ensure `OPENAI_MODEL_FAMILY` matches your model type (e.g., "openai" for GPT models, "claude" for Claude models)
+
+4. If you're using custom API endpoints or non-OpenAI models:
+   - Set the correct `OPENAI_MODEL_FAMILY` value ("claude", "anthropic", "openai", etc.)
+   - Verify your API base URL is correct
+   - Ensure the model name matches what your API endpoint expects
+
+4. If filesystem tools don't work:
+   - Verify the current directory permissions
+   - Check if the filesystem MCP server has proper access to the directory
+
+5. If weather tools fail:
+   - Ensure Python can execute the weather MCP server script
+   - Verify the relative path to `mcp-weather.py` is correct
