@@ -17,7 +17,9 @@ pip install -r requirements.txt
 npm install -g @modelcontextprotocol/server-filesystem
 ```
 
-3. Set up environment:
+3. Set up environment (choose one method):
+
+**Method 1: Using env.py file (recommended for development)**
 ```bash
 cp env.py.example env.py
 ```
@@ -26,10 +28,31 @@ Edit `env.py` with your settings:
 ```python
 import os
 
-os.environ["OPENAI_API_BASE"] = "https://api.openai.com/v1"
-os.environ["OPENAI_API_KEY"] = "your-api-key-here"
-os.environ["OPENAI_MODEL"] = "gpt-4o"
+os.environ["OPENAI_API_BASE"] = "http://127.0.0.1:4000"
+os.environ["OPENAI_API_KEY"] = "sk-1234"
+os.environ["OPENAI_MODEL"] = "gemini-2.5"
+os.environ["OPENAI_MODEL_FAMILY"] = "GEMINI"
 ```
+
+**Method 2: Using export commands (recommended for production/Ubuntu)**
+```bash
+export OPENAI_API_KEY="sk-1234"
+export OPENAI_MODEL="gemini-2.5"
+export OPENAI_API_BASE="http://127.0.0.1:4000"  # Optional, defaults to OpenAI API
+export OPENAI_MODEL_FAMILY="GEMINI"  # Optional, defaults to UNKNOWN
+```
+
+### Model Family Configuration
+
+The `OPENAI_MODEL_FAMILY` environment variable specifies the model family for proper handling of different AI models. Supported values include:
+
+- `"OPENAI"` - For OpenAI models (GPT-3.5, GPT-4, GPT-4o, etc.)
+- `"GEMINI"` - For Google Gemini models
+- `"CLAUDE"` - For Anthropic Claude models
+- `"R1"` - For DeepSeek R1 reasoning models
+- `"UNKNOWN"` - For unrecognized or custom models (default fallback)
+
+This setting ensures proper token counting, cost estimation, and model-specific behavior handling.
 
 4. Run the MCP-enabled agent:
 ```bash
@@ -82,12 +105,18 @@ python helloworld.py
 3. For model-specific errors:
    - Try using a different model from your config list
    - Check if your API key has access to the requested model
-   - Ensure `OPENAI_MODEL_FAMILY` matches your model type (e.g., "openai" for GPT models, "claude" for Claude models)
+   - Ensure `OPENAI_MODEL_FAMILY` matches your model type:
+     - `"OPENAI"` for GPT models (gpt-3.5-turbo, gpt-4, gpt-4o, etc.)
+     - `"GEMINI"` for Google Gemini models (gemini-1.5-pro, gemini-2.0-flash, etc.)
+     - `"CLAUDE"` for Anthropic Claude models (claude-3-5-sonnet, claude-3-haiku, etc.)
+     - `"R1"` for DeepSeek R1 reasoning models
+     - `"UNKNOWN"` for custom or unrecognized models
 
 4. If you're using custom API endpoints or non-OpenAI models:
-   - Set the correct `OPENAI_MODEL_FAMILY` value ("claude", "anthropic", "openai", etc.)
+   - Set the correct `OPENAI_MODEL_FAMILY` value as listed above
    - Verify your API base URL is correct
    - Ensure the model name matches what your API endpoint expects
+   - For proxy services like litellm, use the base model family (e.g., "GEMINI" for "vercel-gemini-2.5-pro")
 
 4. If filesystem tools don't work:
    - Verify the current directory permissions
