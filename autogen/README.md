@@ -29,7 +29,6 @@ import os
 os.environ["OPENAI_API_BASE"] = "https://api.openai.com/v1"
 os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 os.environ["OPENAI_MODEL"] = "gpt-4o"
-os.environ["OPENAI_MODEL_FAMILY"] = "openai"
 ```
 
 4. Run the MCP-enabled agent:
