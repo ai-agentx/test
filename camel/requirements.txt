@@ -1,0 +1,4 @@
+camel-ai[all]
+fastmcp
+python-dotenv
+rich
