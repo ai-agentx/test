@@ -1,0 +1,28 @@
+# Tasks configuration for CrewAI Hello World Example
+# These configurations can be referenced in the Python code
+
+research_task:
+  description: >
+    Research the topic '{topic}' and gather key information including:
+    - Main concepts and definitions
+    - Current trends and developments
+    - Key benefits and applications
+    - Notable examples or case studies
+
+    Provide a comprehensive summary of your findings.
+  expected_output: >
+    A detailed research summary with key points, trends, and insights
+    about the topic, formatted as bullet points and paragraphs.
+
+writing_task:
+  description: >
+    Using the research findings, write an engaging and informative
+    article about '{topic}'. The article should:
+    - Have a compelling introduction
+    - Present the information in a clear, logical structure
+    - Include the key insights from the research
+    - Have a strong conclusion
+    - Be written in an accessible, professional tone
+  expected_output: >
+    A well-structured article of 500-800 words with clear headings,
+    engaging content, and a professional tone. Format as markdown.
