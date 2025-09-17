@@ -13,7 +13,7 @@ agent test
 - [drivex](https://github.com/ai-flowx/drivex)
 - [eino](https://github.com/cloudwego/eino)
 - [evogit](https://github.com/BillHuang2001/evogit)
-- [langchain](https://github.com/langchain-ai/langchain)
+- [langgraph](https://github.com/langchain-ai/langgraph)
 - [metagpt](https://github.com/FoundationAgents/MetaGPT)
 - [openai-agents](https://github.com/openai/openai-agents-python)
 - [openmanus](https://github.com/FoundationAgents/OpenManus)
