@@ -6,6 +6,7 @@ agent test
 
 ## Reference
 
+- [agno](https://github.com/agno-agi/agno)
 - [autogen](https://github.com/microsoft/autogen)
 - [awesome-agent-quickstart](https://github.com/ababdotai/awesome-agent-quickstart)
 - [camel](https://github.com/camel-ai/camel)
