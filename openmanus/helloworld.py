@@ -25,6 +25,10 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Add the current directory to the path to import mcp-weather
+current_dir = Path(__file__).parent
+sys.path.append(str(current_dir))
+
 # Load environment variables
 try:
     # Try to import and load env.py configuration
@@ -46,10 +50,6 @@ import os
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.getLogger().setLevel(getattr(logging, log_level, logging.INFO))
 logger.info(f"Logging level set to: {log_level}")
-
-# Add the current directory to the path to import mcp-weather
-current_dir = Path(__file__).parent
-sys.path.append(str(current_dir))
 
 try:
     # Import OpenManus components
@@ -105,14 +105,35 @@ except ImportError:
                 return {"forecast": "晴, 25℃", "source": "MCP weather server"}
             elif tool_name == "read_file":
                 file_path = parameters.get("path", "unknown")
-                return {"content": f"Content of {file_path}", "source": "MCP filesystem server"}
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    return {"content": content, "source": "MCP filesystem server"}
+                except Exception as e:
+                    return {"error": str(e), "source": "MCP filesystem server"}
             elif tool_name == "list_directory":
                 dir_path = parameters.get("path", ".")
-                return {"files": ["file1.txt", "file2.py", "directory1/"], "source": "MCP filesystem server"}
+                try:
+                    import os
+                    files = []
+                    for item in os.listdir(dir_path):
+                        item_path = os.path.join(dir_path, item)
+                        if os.path.isdir(item_path):
+                            files.append(f"{item}/")
+                        else:
+                            files.append(item)
+                    return {"files": files, "source": "MCP filesystem server"}
+                except Exception as e:
+                    return {"error": str(e), "source": "MCP filesystem server"}
             elif tool_name == "write_file":
                 file_path = parameters.get("path", "unknown")
                 content = parameters.get("content", "")
-                return {"result": f"Wrote {len(content)} characters to {file_path}", "source": "MCP filesystem server"}
+                try:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                    return {"result": f"Wrote {len(content)} characters to {file_path}", "source": "MCP filesystem server"}
+                except Exception as e:
+                    return {"error": str(e), "source": "MCP filesystem server"}
             return {"result": f"Tool {tool_name} executed"}
 
     class Agent:
@@ -518,7 +539,7 @@ async def interactive_mode():
     print("\n=== Interactive OpenManus Weather Agent ===")
     print("Type 'quit' to exit")
 
-    weather_agent = WeatherManusAgent()
+    weather_agent = WeatherFilesystemManusAgent()
 
     try:
         await weather_agent.initialize()
@@ -575,7 +596,6 @@ async def main():
             await demo_basic_agent()
             await demo_weather_mcp_integration()
             await demo_filesystem_mcp_integration()
-            await demo_mcp_client_connection()
         elif args.mode == "basic":
             await demo_basic_agent()
         elif args.mode == "weather":

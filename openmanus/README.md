@@ -6,7 +6,6 @@ This project demonstrates the integration of OpenManus agents with MCP (Model Co
 
 - **Python Version**: Python 3.8 - 3.12 (required for `openmanus` package compatibility)
 - **Node.js**: Required for filesystem MCP server (npm)
-- **Operating System**: Windows, macOS, or Linux
 - **Git**: Required for installing OpenManus from GitHub
 
 ## Installation
@@ -82,56 +81,6 @@ This project demonstrates the integration of OpenManus agents with MCP (Model Co
 - Weather forecasting capabilities
 - Interactive chat mode with command recognition
 - Demonstration of agent-to-server interactions
-
-## Dependencies
-
-Key packages included:
-- `openmanus` - OpenManus agent framework (installed from GitHub, requires Python ≤3.12)
-- `fastmcp` - Fast MCP server implementation
-- `mcp` - Model Context Protocol core
-- `httpx` - HTTP client for weather API calls
-- `pydantic` - Data validation and serialization
-
-## Troubleshooting
-
-### Python Version Issues
-If you encounter compatibility issues, ensure your Python version is 3.12 or lower:
-```bash
-python --version
-```
-
-For Python version management, consider using:
-- `pyenv` (Linux/macOS)
-- `conda` environments
-- `virtualenv` with specific Python versions
-
-### Node.js and Filesystem Server Issues
-If the filesystem server fails to start:
-1. Ensure Node.js is installed: `node --version`
-2. Install the filesystem server globally: `npm install -g @modelcontextprotocol/server-filesystem`
-3. Check if npx is available: `npx --version`
-
-### Installation Issues
-If you encounter package installation issues:
-1. Create a virtual environment with Python ≤3.12
-2. Upgrade pip: `pip install --upgrade pip`
-3. Install dependencies: `pip install -r requirements.txt`
-4. If OpenManus installation fails, ensure Git is installed and accessible
-
-### MCP Server Connection Issues
-If MCP servers fail to connect:
-- Weather server: Ensure `mcp-weather.py` exists in the project directory
-- Filesystem server: Ensure Node.js and npm are properly installed
-- Check terminal output for specific error messages
-2. Upgrade pip: `pip install --upgrade pip`
-3. Install dependencies: `pip install -r requirements.txt`
-4. If OpenManus installation fails, ensure Git is installed and accessible
-
-### Git Installation Required
-Since OpenManus is installed from GitHub, ensure Git is installed:
-- Windows: Download from [git-scm.com](https://git-scm.com/download/win)
-- macOS: `brew install git` or Xcode Command Line Tools
-- Linux: `sudo apt-get install git` (Ubuntu/Debian) or equivalent
 
 ## Contributing
 
