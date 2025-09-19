@@ -15,7 +15,6 @@ agent test
 - [eino](https://github.com/cloudwego/eino)
 - [evogit](https://github.com/BillHuang2001/evogit)
 - [langgraph](https://github.com/langchain-ai/langgraph)
-- [metagpt](https://github.com/FoundationAgents/MetaGPT)
 - [openai-agents](https://github.com/openai/openai-agents-python)
 - [openmanus](https://github.com/FoundationAgents/OpenManus)
 - [pydantic](https://github.com/pydantic/pydantic-ai)
