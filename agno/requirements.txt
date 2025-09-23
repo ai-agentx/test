@@ -1,0 +1,9 @@
+agno
+anthropic
+fastapi
+fastmcp
+mcp
+openai
+python-dotenv
+sqlalchemy
+uvicorn
