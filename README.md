@@ -6,6 +6,7 @@ agent test
 
 ## Reference
 
+- [a2a](https://a2a-protocol.org/)
 - [agno](https://github.com/agno-agi/agno)
 - [autogen](https://github.com/microsoft/autogen)
 - [awesome-agent-quickstart](https://github.com/ababdotai/awesome-agent-quickstart)
