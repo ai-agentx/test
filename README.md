@@ -9,6 +9,8 @@ agent test
 ### A2A Protocol
 
 - [a2a](https://a2a-protocol.org/)
+- [a2a-inspector](https://github.com/a2aproject/a2a-inspector)
+- [a2a-samples-demo](https://github.com/a2aproject/a2a-samples/tree/main/demo)
 - [openagents](https://openagents.org/)
 
 ### Agent Framework
