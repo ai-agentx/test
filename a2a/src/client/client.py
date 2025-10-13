@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import click
 import httpx
-from a2a.client import A2AClient
+from a2a.client import A2AClient, A2ACardResolver, create_text_message_object
 from a2a.types import (
     AgentCard,
     Message,
@@ -53,18 +53,23 @@ class A2AEchoClient:
             # Create HTTP client
             self.httpx_client = httpx.AsyncClient(timeout=self.timeout)
 
-            # Get the A2A client using the agent card URL
+            # Prefer JSON-RPC bootstrap to avoid issues with well-known path proxies
             logger.info(f"Connecting to A2A agent at {self.agent_url}")
-            self.a2a_client = await A2AClient.get_client_from_agent_card_url(
-                self.httpx_client, self.agent_url
-            )
+            self.a2a_client = A2AClient(self.httpx_client, url=self.agent_url)
+            # Try to fetch the agent card (best-effort). If it fails, continue; messaging still works.
+            try:
+                self.agent_card = await self.a2a_client.get_card()
+            except Exception as e:
+                logger.warning(
+                    f"Could not fetch agent card (continuing without card): {e}"
+                )
 
-            # Get agent card for reference
-            self.agent_card = self.a2a_client.agent_card
-
-            logger.info(f"Successfully connected to agent: {self.agent_card.name}")
-            logger.info(f"Agent description: {self.agent_card.description}")
-            logger.info(f"Agent skills: {[skill.name for skill in self.agent_card.skills]}")
+            if self.agent_card:
+                logger.info(f"Successfully connected to agent: {self.agent_card.name}")
+                logger.info(f"Agent description: {self.agent_card.description}")
+                logger.info(f"Agent skills: {[skill.name for skill in self.agent_card.skills]}")
+            else:
+                logger.info("Connected to agent endpoint; agent card unavailable (will still send messages)")
 
         except Exception as e:
             logger.error(f"Failed to connect to A2A agent: {e}")
@@ -100,12 +105,8 @@ class A2AEchoClient:
         try:
             logger.info(f"Sending message: {text[:50]}...")
 
-            # Create message with text part
-            message = Message(
-                role=Role.USER,
-                parts=[TextPart(type="text", text=text)],
-                messageId=uuid4().hex,
-            )
+            # Create message with text part using helpers to match SDK schema
+            message = create_text_message_object(role=Role.user, content=text)
 
             # Create send message request
             send_params = MessageSendParams(
@@ -186,41 +187,76 @@ class A2AEchoClient:
             raise
 
     def _extract_text_from_response(self, response: Any) -> str:
-        """Extract text content from an A2A response.
+        """Extract text content from an A2A response, robust to SendMessageResponse and Message objects.
 
-        Args:
-            response: Response object from A2A client
-
-        Returns:
-            Extracted text content
+        Handles Pydantic RootModel-style wrappers (objects exposing a `.root` attribute)
+        at multiple levels: response -> result -> message.parts -> part.root.text.
         """
         try:
-            # Handle different response formats
-            if hasattr(response, 'result') and response.result:
-                result = response.result
+            # Helper to unwrap Pydantic RootModel-style wrappers
+            def _unwrap(obj: Any) -> Any:
+                try:
+                    # unwrap repeatedly in case of nested roots
+                    while hasattr(obj, 'root') and getattr(obj, 'root') is not None:
+                        obj = getattr(obj, 'root')
+                except Exception:
+                    return obj
+                return obj
 
-                # Check if result has artifact
-                if hasattr(result, 'artifact') and result.artifact:
-                    artifact = result.artifact
+            response_unwrapped = _unwrap(response)
 
-                    # Extract text from parts
-                    if hasattr(artifact, 'parts') and artifact.parts:
+            # Handle SendMessageResponse (SDK v0.3.8)
+            if hasattr(response_unwrapped, 'result') and getattr(response_unwrapped, 'result'):
+                result = _unwrap(getattr(response_unwrapped, 'result'))
+                # If result is a Message object
+                if hasattr(result, 'parts') and getattr(result, 'parts'):
+                    text_parts = []
+                    for idx, part in enumerate(result.parts):
+                        logger.debug(f"result.parts[{idx}] type={type(part)}, repr={repr(part)}")
+                        inner_part = _unwrap(part)
+                        # Try part.root.text
+                        if hasattr(inner_part, 'text') and getattr(inner_part, 'text'):
+                            text_parts.append(getattr(inner_part, 'text'))
+                        # Try part.text
+                        elif hasattr(part, 'text') and getattr(part, 'text'):
+                            text_parts.append(getattr(part, 'text'))
+                        # Try dict access
+                        elif isinstance(part, dict):
+                            if 'root' in part and isinstance(part['root'], dict) and 'text' in part['root'] and part['root']['text']:
+                                text_parts.append(part['root']['text'])
+                            elif 'text' in part and part['text']:
+                                text_parts.append(part['text'])
+                        # Fallback: str(part)
+                        else:
+                            text_parts.append(str(part))
+                    if text_parts:
+                        return " ".join(text_parts)
+                # If result has artifact (older SDKs)
+                if hasattr(result, 'artifact') and getattr(result, 'artifact'):
+                    artifact = _unwrap(getattr(result, 'artifact'))
+                    if hasattr(artifact, 'parts') and getattr(artifact, 'parts'):
                         text_parts = []
                         for part in artifact.parts:
-                            if hasattr(part, 'text') and part.text:
-                                text_parts.append(part.text)
-
+                            inner_part = _unwrap(part)
+                            if hasattr(inner_part, 'text') and getattr(inner_part, 'text'):
+                                text_parts.append(getattr(inner_part, 'text'))
                         if text_parts:
                             return " ".join(text_parts)
-
                 # Fallback: check if result itself has text
-                if hasattr(result, 'text'):
-                    return result.text
-
+                if hasattr(result, 'text') and getattr(result, 'text'):
+                    return getattr(result, 'text')
+            # If response itself is a Message object
+            if hasattr(response_unwrapped, 'parts') and getattr(response_unwrapped, 'parts'):
+                text_parts = []
+                for part in response_unwrapped.parts:
+                    inner_part = _unwrap(part)
+                    if hasattr(inner_part, 'text') and getattr(inner_part, 'text'):
+                        text_parts.append(getattr(inner_part, 'text'))
+                if text_parts:
+                    return " ".join(text_parts)
             # Fallback: convert response to string
             logger.warning(f"Could not extract text from response format: {type(response)}")
             return str(response)
-
         except Exception as e:
             logger.error(f"Error extracting text from response: {e}")
             return f"Error processing response: {e}"
@@ -231,28 +267,53 @@ class A2AEchoClient:
         Returns:
             Dictionary with agent information
         """
+        # If we don't have a card yet, attempt once to retrieve it
+        if not self.agent_card and self.a2a_client:
+            try:
+                self.agent_card = await self.a2a_client.get_card()
+            except Exception:
+                pass
         if not self.agent_card:
-            raise ValueError("Not connected to an A2A agent")
+            # Minimal fallback info
+            return {
+                "name": "Unknown A2A Agent",
+                "description": "Agent card unavailable",
+                "version": "",
+                "url": self.agent_url,
+                "skills": [],
+                "capabilities": {
+                    "input_modes": ["text"],
+                    "output_modes": ["text"],
+                    "streaming": False,
+                },
+            }
+
+        # Normalize fields across schema variants
+        default_input_modes = getattr(self.agent_card, "default_input_modes", None) or []
+        default_output_modes = getattr(self.agent_card, "default_output_modes", None) or []
+        capabilities = getattr(self.agent_card, "capabilities", None)
+        streaming = getattr(capabilities, "streaming", False) if capabilities else False
+
+        skills_list = []
+        for skill in getattr(self.agent_card, "skills", []) or []:
+            skills_list.append({
+                "id": getattr(skill, "id", ""),
+                "name": getattr(skill, "name", ""),
+                "description": getattr(skill, "description", ""),
+                "tags": getattr(skill, "tags", []) or [],
+                "examples": getattr(skill, "examples", []) or [],
+            })
 
         return {
-            "name": self.agent_card.name,
-            "description": self.agent_card.description,
-            "version": self.agent_card.version,
-            "url": self.agent_card.url,
-            "skills": [
-                {
-                    "id": skill.id,
-                    "name": skill.name,
-                    "description": skill.description,
-                    "tags": skill.tags,
-                    "examples": skill.examples,
-                }
-                for skill in self.agent_card.skills
-            ],
+            "name": getattr(self.agent_card, "name", ""),
+            "description": getattr(self.agent_card, "description", ""),
+            "version": getattr(self.agent_card, "version", ""),
+            "url": getattr(self.agent_card, "url", ""),
+            "skills": skills_list,
             "capabilities": {
-                "input_modes": self.agent_card.capabilities.input_modes,
-                "output_modes": self.agent_card.capabilities.output_modes,
-                "streaming": self.agent_card.capabilities.streaming,
+                "input_modes": default_input_modes,
+                "output_modes": default_output_modes,
+                "streaming": streaming,
             },
         }
 

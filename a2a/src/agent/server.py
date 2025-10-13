@@ -200,7 +200,8 @@ def main(host: str, port: int, log_level: str, no_llm: bool) -> None:
     try:
         # Create and run the server
         server = create_echo_agent_server(host, port, use_llm)
-        server.run()    except KeyboardInterrupt:
+        server.run()
+    except KeyboardInterrupt:
         logger.info("Server shutdown requested")
     except Exception as e:
         logger.error(f"Server error: {e}")

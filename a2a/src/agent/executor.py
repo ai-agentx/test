@@ -89,7 +89,58 @@ class EchoAgentExecutor(AgentExecutor):
         logger.info(f"Initialized EchoAgentExecutor with {agent_type}")
 
         # Store conversation contexts for multi-turn conversations
-        self.conversation_contexts: Dict[str, List[str]] = {}    async def send_message(
+        self.conversation_contexts: Dict[str, List[str]] = {}
+
+    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        """Execute a task and publish a response message to the event queue (a2a-sdk signature)."""
+        try:
+            message = context.message
+
+            # Process text parts from the message
+            response_texts = []
+            for part in message.parts:
+                # Unwrap nested Part -> TextPart structures
+                text_value = None
+                if hasattr(part, 'root') and hasattr(part.root, 'text'):
+                    text_value = part.root.text
+                elif hasattr(part, 'text'):
+                    text_value = part.text
+
+                if text_value is not None:
+                    # Process the text using our agent (LLM or Echo)
+                    if hasattr(self.agent, 'process_message') and callable(getattr(self.agent, 'process_message')):
+                        import inspect
+                        if inspect.iscoroutinefunction(self.agent.process_message):
+                            response_text = await self.agent.process_message(text_value)
+                        else:
+                            response_text = self.agent.process_message(text_value)
+                    else:
+                        response_text = "Agent error: No process_message method available"
+
+                    response_texts.append(response_text)
+                else:
+                    response_texts.append("I can only process text messages.")
+
+            if not response_texts:
+                response_texts = ["I didn't find any text to process in your message."]
+
+            # Combine all responses
+            combined_response = " ".join(response_texts)
+
+            # Create and publish response message
+            response_message = new_agent_text_message(combined_response)
+            await event_queue.enqueue_event(response_message)
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in execute method: {e}")
+            error_message = new_agent_text_message(
+                f"I encountered an error while processing your message: {str(e)}"
+            )
+            await event_queue.enqueue_event(error_message)
+            return None
+
+    async def send_message(
         self,
         request_context: RequestContext,
         task: Task,
@@ -122,32 +173,37 @@ class EchoAgentExecutor(AgentExecutor):
             # Process text parts from the message
             response_texts = []
             for part in message.parts:
-                if isinstance(part, TextPart):
+                # Unwrap nested Part -> TextPart
+                inner = part.root if hasattr(part, 'root') else part
+
+                if isinstance(inner, TextPart) or hasattr(inner, 'text'):
+                    text_value = inner.text if hasattr(inner, 'text') else None
                     # Process the text using our agent (LLM or Echo)
-                    if hasattr(self.agent, 'process_message') and callable(getattr(self.agent, 'process_message')):
-                        # Check if it's an async method (LLM agent)
-                        import inspect
-                        if inspect.iscoroutinefunction(self.agent.process_message):
-                            response_text = await self.agent.process_message(part.text, context)
+                    if text_value is not None:
+                        if hasattr(self.agent, 'process_message') and callable(getattr(self.agent, 'process_message')):
+                            # Check if it's an async method (LLM agent)
+                            import inspect
+                            if inspect.iscoroutinefunction(self.agent.process_message):
+                                response_text = await self.agent.process_message(text_value, context)
+                            else:
+                                response_text = self.agent.process_message(text_value)
                         else:
-                            response_text = self.agent.process_message(part.text)
-                    else:
-                        response_text = f"Agent error: No process_message method available"
+                            response_text = "Agent error: No process_message method available"
 
-                    response_texts.append(response_text)
+                        response_texts.append(response_text)
 
-                    # Store conversation context
-                    if context_id:
-                        if context_id not in self.conversation_contexts:
-                            self.conversation_contexts[context_id] = []
-                        self.conversation_contexts[context_id].append(f"User: {part.text}")
-                        self.conversation_contexts[context_id].append(f"Agent: {response_text}")
+                        # Store conversation context
+                        if context_id:
+                            if context_id not in self.conversation_contexts:
+                                self.conversation_contexts[context_id] = []
+                            self.conversation_contexts[context_id].append(f"User: {text_value}")
+                            self.conversation_contexts[context_id].append(f"Agent: {response_text}")
 
-                        # Keep only last 10 exchanges to manage memory
-                        if len(self.conversation_contexts[context_id]) > 20:
-                            self.conversation_contexts[context_id] = self.conversation_contexts[context_id][-20:]
+                            # Keep only last 10 exchanges to manage memory
+                            if len(self.conversation_contexts[context_id]) > 20:
+                                self.conversation_contexts[context_id] = self.conversation_contexts[context_id][-20:]
 
-                elif isinstance(part, DataPart):
+                elif isinstance(inner, DataPart):
                     # Handle data parts (for future extension)
                     response_texts.append("I received some data, but I can only process text messages.")
                 else:
@@ -226,3 +282,16 @@ class EchoAgentExecutor(AgentExecutor):
         """
         logger.warning(f"cancel_task called for task_id: {task_id} (not implemented)")
         raise UnsupportedOperationError("cancel_task is not supported by this agent")
+
+    # Satisfy AgentExecutor abstract 'cancel' method required by a2a-sdk
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:  # type: ignore[override]
+        """Request the agent to cancel an ongoing task.
+
+        This example agent doesn't track long-running tasks, so we simply log
+        and return without publishing events. This fulfills the abstract API.
+        """
+        task_id = getattr(getattr(context, 'task', None), 'id', None)
+        logger.warning(
+            f"cancel requested for task_id: {task_id if task_id else 'unknown'} (no-op in EchoAgentExecutor)"
+        )
+        return
