@@ -33,7 +33,7 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    cp .env.example .env
 
    # Edit .env file with your configuration:
-   OPENAI_API_BASE=http://localhost:4000/v1
+   OPENAI_API_BASE=http://localhost:4000
    OPENAI_API_KEY=your_api_key
    OPENAI_MODEL_NAME=claude-3-sonnet
    ```
@@ -74,7 +74,7 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    LOG_LEVEL=INFO
 
    # LLM Configuration
-   OPENAI_API_BASE=http://localhost:4000/v1
+   OPENAI_API_BASE=http://localhost:4000
    OPENAI_API_KEY=your_api_key
    OPENAI_MODEL_NAME=claude-3-sonnet
    ```
