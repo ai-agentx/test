@@ -27,19 +27,14 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    pip install -r requirements.txt
    ```
 
-2. **Configure LLM (Optional)**:
+2. **Configure LLM**:
    ```bash
    # Copy the example environment file
    cp .env.example .env
 
    # Edit .env file with your configuration:
-   # For OpenAI
-   OPENAI_API_KEY=your_api_key
-   OPENAI_MODEL_NAME=gpt-3.5-turbo
-
-   # For LiteLLM (see LITELLM_CONFIG.md for more examples)
    OPENAI_API_BASE=http://localhost:4000/v1
-   OPENAI_API_KEY=dummy_key
+   OPENAI_API_KEY=your_api_key
    OPENAI_MODEL_NAME=claude-3-sonnet
    ```
 
@@ -78,10 +73,10 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    A2A_PORT=8080
    LOG_LEVEL=INFO
 
-   # LLM Configuration (Optional)
+   # LLM Configuration
    OPENAI_API_BASE=http://localhost:4000/v1
    OPENAI_API_KEY=your_api_key
-   OPENAI_MODEL_NAME=gpt-3.5-turbo
+   OPENAI_MODEL_NAME=claude-3-sonnet
    ```
 
 3. **Available Environment Variables:**
@@ -136,43 +131,6 @@ The example agent supports:
 - **Agent Card**: Provides metadata about agent capabilities
 - **Health Checks**: Standard A2A protocol health endpoints
 - **A2A Compliance**: Full protocol implementation
-
-## LiteLLM Integration
-
-The agent supports LiteLLM for accessing multiple LLM providers through a unified interface:
-
-### Supported Providers:
-- **OpenAI**: GPT-3.5, GPT-4, GPT-4 Turbo
-- **Anthropic**: Claude 3 Sonnet, Claude 3 Haiku
-- **Google**: Gemini Pro, PaLM
-- **Azure OpenAI**: All Azure OpenAI models
-- **Local Models**: Ollama, LocalAI, Text Generation WebUI
-- **Open Source**: Hugging Face models via various endpoints
-
-### Configuration Examples:
-
-First, copy the example environment file:
-```bash
-cp .env.example .env
-```
-
-Then edit `.env` with your configuration:
-```bash
-# OpenAI
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL_NAME=gpt-3.5-turbo
-
-# LiteLLM + Claude
-OPENAI_API_BASE=http://localhost:4000/v1
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL_NAME=claude-3-sonnet
-
-# Local Ollama
-OPENAI_API_BASE=http://localhost:11434/v1
-OPENAI_MODEL_NAME=llama2
-```
-
-See `LITELLM_CONFIG.md` for detailed setup instructions and more provider examples.
 
 ## Protocol Details
 
