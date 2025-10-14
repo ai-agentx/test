@@ -11,6 +11,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from agent.executor import EchoAgent, EchoAgentExecutor
 from agent.server import create_agent_card
+from agent.langgraph_agent import LangGraphAgent, LangGraphAgentExecutor
+from agent.crewai_agent import CrewAIAgent, CrewAIAgentExecutor
 
 
 class TestEchoAgent(unittest.TestCase):
@@ -65,6 +67,33 @@ class TestAgentCard(unittest.TestCase):
         skill = card.skills[0]
         self.assertEqual(skill.id, "echo_text")
         self.assertTrue(len(skill.examples) > 0)
+
+
+class TestLangGraphAgent(unittest.TestCase):
+    """Basic tests for LangGraph agent presence and behavior without API key."""
+
+    def test_instantiation_without_api_key(self):
+        # Ensure that creating the agent without credentials doesn't crash
+        agent = LangGraphAgent()
+        # Without OPENAI_API_KEY, agent is not ready
+        self.assertFalse(agent.is_ready())
+
+    def test_executor_instantiation(self):
+        # Ensure executor can be created
+        executor = LangGraphAgentExecutor()
+        self.assertIsNotNone(executor)
+
+
+class TestCrewAIAgent(unittest.TestCase):
+    """Basic tests for CrewAI agent presence and behavior without API key."""
+
+    def test_instantiation_without_api_key(self):
+        agent = CrewAIAgent()
+        self.assertFalse(agent.is_ready())
+
+    def test_executor_instantiation(self):
+        executor = CrewAIAgentExecutor()
+        self.assertIsNotNone(executor)
 
 
 async def run_async_tests():

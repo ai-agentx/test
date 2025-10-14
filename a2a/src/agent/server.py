@@ -1,6 +1,7 @@
 """A2A Agent Server - Implements an A2A compliant agent server."""
 
 import logging
+import multiprocessing
 import os
 from typing import Optional
 
@@ -16,6 +17,8 @@ from a2a.types import (
     AgentSkill,
 )
 from .executor import EchoAgentExecutor
+from .langgraph_agent import LangGraphAgentExecutor
+from .crewai_agent import CrewAIAgentExecutor
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +26,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def create_agent_card(host: str, port: int, use_llm: bool = True) -> AgentCard:
+def create_agent_card(host: str, port: int, use_llm: bool = True, agent_type: str = "echo") -> AgentCard:
     """Create an Agent Card describing our agent's capabilities.
 
     Args:
@@ -38,7 +41,41 @@ def create_agent_card(host: str, port: int, use_llm: bool = True) -> AgentCard:
     llm_available = use_llm and os.getenv("OPENAI_API_KEY") is not None
 
     # Define the agent's skill based on capabilities
-    if llm_available:
+    if agent_type == "langgraph":
+        skill = AgentSkill(
+            id="react_tool_use",
+            name="ReAct Tool Use",
+            description="A LangGraph ReAct agent that can use tools such as currency conversion and answer questions",
+            tags=["langgraph", "react", "tools", "llm"],
+            examples=[
+                "Convert 15 USD to EUR",
+                "What's the exchange rate from GBP to JPY?",
+                "Explain how the tool call was done",
+            ],
+        )
+        agent_name = "LangGraph Agent"
+        agent_description = (
+            "An A2A-compatible agent powered by LangGraph using a ReAct workflow. "
+            "It can call tools and provide concise, helpful answers."
+        )
+    elif agent_type == "crewai":
+        skill = AgentSkill(
+            id="crewai_generalist",
+            name="CrewAI Generalist",
+            description="A CrewAI-based assistant that produces concise, helpful answers to user questions",
+            tags=["crewai", "assistant", "llm"],
+            examples=[
+                "Summarize the benefits of solar energy",
+                "Give me a short plan for learning Python",
+                "Explain Docker in simple terms",
+            ],
+        )
+        agent_name = "CrewAI Agent"
+        agent_description = (
+            "An A2A-compatible agent powered by CrewAI that executes a single-turn task "
+            "with a generalist assistant."
+        )
+    elif llm_available:
         skill = AgentSkill(
             id="intelligent_conversation",
             name="Intelligent Conversation",
@@ -97,7 +134,7 @@ def create_agent_card(host: str, port: int, use_llm: bool = True) -> AgentCard:
     return agent_card
 
 
-def create_echo_agent_server(host: str = "localhost", port: int = 8080, use_llm: bool = True) -> uvicorn.Server:
+def create_echo_agent_server(host: str = "localhost", port: int = 8080, use_llm: bool = True, agent_type: str = "echo") -> uvicorn.Server:
     """Create and configure an A2A agent server.
 
     Args:
@@ -109,10 +146,16 @@ def create_echo_agent_server(host: str = "localhost", port: int = 8080, use_llm:
         Configured Uvicorn server instance
     """
     # Create agent card
-    agent_card = create_agent_card(host, port, use_llm)
+    agent_card = create_agent_card(host, port, use_llm, agent_type=agent_type)
 
     # Create agent executor
-    agent_executor = EchoAgentExecutor(use_llm=use_llm)    # Create request handler with in-memory task store
+    if agent_type == "langgraph":
+        agent_executor = LangGraphAgentExecutor()
+    elif agent_type == "crewai":
+        agent_executor = CrewAIAgentExecutor()
+    else:
+        agent_executor = EchoAgentExecutor(use_llm=use_llm)
+    # Create request handler with in-memory task store
     request_handler = DefaultRequestHandler(
         agent_executor=agent_executor,
         task_store=InMemoryTaskStore(),
@@ -144,6 +187,7 @@ def create_echo_agent_server(host: str = "localhost", port: int = 8080, use_llm:
 
     logger.info(f"Created A2A Agent server at http://{host}:{port}")
     logger.info(f"Agent card available at: http://{host}:{port}/.well-known/agent.json")
+    logger.info(f"Agent type: {agent_type}")
 
     if llm_available:
         logger.info(f"LLM enabled: {model_name} via {api_base}")
@@ -158,7 +202,8 @@ def create_echo_agent_server(host: str = "localhost", port: int = 8080, use_llm:
 @click.option("--port", default=8080, type=int, help="Port number to bind the server to")
 @click.option("--log-level", default="info", help="Logging level")
 @click.option("--no-llm", is_flag=True, help="Disable LLM and use simple echo mode")
-def main(host: str, port: int, log_level: str, no_llm: bool) -> None:
+@click.option("--agent-type", type=click.Choice(["echo", "langgraph", "crewai"], case_sensitive=False), default="echo", help="Select which agent implementation to run")
+def main(host: str, port: int, log_level: str, no_llm: bool, agent_type: str = None) -> None:
     """Start the A2A Agent server.
 
     This starts an A2A compliant agent server that can receive and respond to text messages.
@@ -181,6 +226,7 @@ def main(host: str, port: int, log_level: str, no_llm: bool) -> None:
     logger.info(f"Host: {host}")
     logger.info(f"Port: {port}")
     logger.info(f"LLM Mode: {'Enabled' if use_llm else 'Disabled'}")
+    logger.info(f"Agent Type: {agent_type}")
 
     # Show configuration
     if use_llm:
@@ -197,9 +243,51 @@ def main(host: str, port: int, log_level: str, no_llm: bool) -> None:
         model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo")
         logger.info(f"Model: {model_name}")
 
+    # If agent_type is not set or empty, run all agents on different ports
+    if not agent_type:
+        logger.info("No agent_type set; running all agents (echo, langgraph, crewai) on different ports.")
+        base_port = port
+        agent_types = ["echo", "langgraph", "crewai"]
+        servers = []
+        for idx, atype in enumerate(agent_types):
+            agent_port = base_port + idx
+            logger.info(f"\n{'='*40}\nStarting {atype.upper()} agent on port {agent_port}")
+            # Log LLM and model info for each agent type
+            if atype == "langgraph":
+                logger.info(f"LangGraph agent will use LLM: {os.getenv('OPENAI_MODEL_NAME', 'gpt-4o-mini')} via {os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')}")
+            elif atype == "crewai":
+                logger.info(f"CrewAI agent will use LLM: {os.getenv('OPENAI_MODEL_NAME', 'gpt-4o-mini')} via {os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')}")
+            else:
+                logger.info(f"Echo agent will use LLM: {os.getenv('OPENAI_MODEL_NAME', 'gpt-3.5-turbo')} via {os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')}")
+            server = create_echo_agent_server(host, agent_port, use_llm, agent_type=atype)
+            servers.append(server)
+        def run_server_instance(server, atype, port):
+            logger.info(f"{'='*40}\nRunning {atype.upper()} agent at http://{host}:{port}\n{'='*40}")
+            server.run()
+
+        processes = []
+        for server, atype in zip(servers, agent_types):
+            agent_port = base_port + agent_types.index(atype)
+            p = multiprocessing.Process(target=run_server_instance, args=(server, atype, agent_port))
+            p.start()
+            processes.append(p)
+        try:
+            for p in processes:
+                p.join()
+        except KeyboardInterrupt:
+            logger.info("Server shutdown requested")
+            for p in processes:
+                p.terminate()
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+            for p in processes:
+                p.terminate()
+            raise
+        return
+
     try:
         # Create and run the server
-        server = create_echo_agent_server(host, port, use_llm)
+        server = create_echo_agent_server(host, port, use_llm, agent_type=agent_type)
         server.run()
     except KeyboardInterrupt:
         logger.info("Server shutdown requested")

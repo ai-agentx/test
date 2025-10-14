@@ -43,8 +43,23 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    # With LLM (if configured)
    python examples/run_server.py
 
+   # By default, if no --agent-type is set, the server runs all agents (Echo, LangGraph, CrewAI).
+   # You can select a specific agent type using --agent-type:
+
    # Echo mode only
    python examples/run_server.py --no-llm
+
+   # LangGraph agent (ReAct + tools)
+   python examples/run_server.py --agent-type langgraph
+   # or
+   python examples/run_langgraph_server.py --agent-type langgraph
+
+   # CrewAI agent (generalist assistant)
+   python examples/run_server.py --agent-type crewai
+   # or
+   python examples/run_crewai_server.py
+
+   # Note: All agent types are available; use --agent-type to select. For multi-agent endpoints, see advanced usage.
    ```
 
 4. **Test with Client** (in another terminal):
@@ -109,6 +124,24 @@ from src.client.client import A2AEchoClient
 client = A2AEchoClient("http://localhost:8080")
 response = await client.send_message("Hello, Agent!")
 print(response)
+```
+
+### LangGraph Agent
+
+To run a LangGraph-powered agent that can call tools like currency conversion:
+
+```bash
+python examples/run_server.py --agent-type langgraph
+```
+
+### CrewAI Agent
+
+To run a CrewAI-powered agent with a generalist assistant:
+
+```bash
+python examples/run_server.py --agent-type crewai
+# or
+python examples/run_crewai_server.py
 ```
 
 ## Agent Capabilities

@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "a2a>=0.1.0",
+    "a2a-sdk[http-server]>=0.3.8",
     "httpx>=0.24.0",
     "uvicorn>=0.23.0",
     "click>=8.0.0",
@@ -27,6 +27,10 @@ dependencies = [
     "fastapi>=0.100.0",
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "crewai>=0.67.0",
 ]
 
 [project.optional-dependencies]

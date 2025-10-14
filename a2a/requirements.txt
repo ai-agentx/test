@@ -10,6 +10,12 @@ fastapi>=0.100.0
 openai>=1.0.0
 python-dotenv>=1.0.0
 
+# LangGraph / LangChain (for LangGraph agent)
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+crewai>=0.67.0
+
 # Development dependencies (optional)
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
