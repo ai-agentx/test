@@ -1,3 +1,7 @@
+# Restore single-agent interactive_chat for --interactive mode
+async def interactive_chat(agent_url: str) -> None:
+    await interactive_multiagent_chat({"echo": agent_url})
+
 """A2A Client - Implements client functionality to interact with A2A agents."""
 
 import asyncio
@@ -318,76 +322,100 @@ class A2AEchoClient:
         }
 
 
-async def interactive_chat(agent_url: str) -> None:
-    """Start an interactive chat session with the A2A agent.
 
-    Args:
-        agent_url: URL of the A2A agent
-    """
-    print(f"\n🤖 A2A Echo Agent Interactive Chat")
-    print(f"Connecting to: {agent_url}")
+async def interactive_multiagent_chat(agent_urls: Dict[str, str]) -> None:
+    """Interactive chat with multiple agents; switch between them with /switch."""
+    print("\n🤖 A2A Multi-Agent Interactive Chat")
+    print("Connecting to agents:")
+    for name, url in agent_urls.items():
+        print(f"  {name}: {url}")
     print("Type 'quit', 'exit', or 'bye' to end the session")
     print("Type 'info' to see agent information")
+    print("Type '/switch <agent>' to change active agent (echo, langgraph, crewai)")
     print("-" * 50)
 
-    try:
-        async with A2AEchoClient(agent_url) as client:
-            # Show agent info
-            agent_info = await client.get_agent_info()
-            print(f"Connected to: {agent_info['name']}")
-            print(f"Description: {agent_info['description']}")
-            print("-" * 50)
+    # Connect to all agents
+    clients = {}
+    for name, url in agent_urls.items():
+        try:
+            client = A2AEchoClient(url)
+            await client.connect()
+            clients[name] = client
+        except Exception as e:
+            print(f"❌ Failed to connect to {name} agent: {e}")
 
-            context_id = uuid4().hex  # Maintain conversation context
+    # Default to echo
+    active_agent = "echo"
+    context_ids = {name: uuid4().hex for name in clients}
 
-            while True:
-                try:
-                    # Get user input
-                    user_input = input("\n👤 You: ").strip()
+    def show_agent_info(name):
+        client = clients[name]
+        info = asyncio.run(client.get_agent_info())
+        print(f"\n📋 Agent Info for {name}:")
+        print(f"   Name: {info['name']}")
+        print(f"   Version: {info['version']}")
+        print(f"   Skills: {', '.join([s['name'] for s in info['skills']])}")
 
-                    if not user_input:
-                        continue
+    # Show info for active agent
+    info = await clients[active_agent].get_agent_info()
+    print(f"Connected to: {info['name']} ({active_agent})")
+    print(f"Description: {info['description']}")
+    print("-" * 50)
 
-                    # Handle special commands
-                    if user_input.lower() in ['quit', 'exit', 'bye']:
-                        print("👋 Goodbye!")
-                        break
-                    elif user_input.lower() == 'info':
-                        info = await client.get_agent_info()
-                        print(f"\n📋 Agent Info:")
-                        print(f"   Name: {info['name']}")
-                        print(f"   Version: {info['version']}")
-                        print(f"   Skills: {', '.join([s['name'] for s in info['skills']])}")
-                        continue
+    while True:
+        try:
+            user_input = input(f"\n👤 You ({active_agent}): ").strip()
+            if not user_input:
+                continue
+            if user_input.lower() in ['quit', 'exit', 'bye']:
+                print("👋 Goodbye!")
+                break
+            elif user_input.lower() == 'info':
+                info = await clients[active_agent].get_agent_info()
+                print(f"\n📋 Agent Info for {active_agent}:")
+                print(f"   Name: {info['name']}")
+                print(f"   Version: {info['version']}")
+                print(f"   Skills: {', '.join([s['name'] for s in info['skills']])}")
+                continue
+            elif user_input.lower().startswith('/switch'):
+                parts = user_input.split()
+                if len(parts) == 2 and parts[1] in clients:
+                    active_agent = parts[1]
+                    info = await clients[active_agent].get_agent_info()
+                    print(f"Switched to {active_agent} agent: {info['name']}")
+                    print(f"Description: {info['description']}")
+                else:
+                    print(f"Usage: /switch <agent> (options: {', '.join(clients.keys())})")
+                continue
+            print("🤖 Agent: ", end="", flush=True)
+            response = await clients[active_agent].send_message(user_input, context_ids[active_agent])
+            print(response)
+        except KeyboardInterrupt:
+            print("\n\n👋 Chat interrupted. Goodbye!")
+            break
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            print("Try again or type 'quit' to exit.")
 
-                    # Send message to agent
-                    print("🤖 Agent: ", end="", flush=True)
-                    response = await client.send_message(user_input, context_id)
-                    print(response)
-
-                except KeyboardInterrupt:
-                    print("\n\n👋 Chat interrupted. Goodbye!")
-                    break
-                except Exception as e:
-                    print(f"\n❌ Error: {e}")
-                    print("Try again or type 'quit' to exit.")
-
-    except Exception as e:
-        print(f"❌ Failed to connect to agent: {e}")
+    # Disconnect all clients
+    for client in clients.values():
+        await client.disconnect()
 
 
 @click.command()
 @click.option("--agent-url", default="http://localhost:8080", help="URL of the A2A agent")
 @click.option("--message", help="Single message to send (non-interactive mode)")
 @click.option("--interactive", is_flag=True, help="Start interactive chat session")
+@click.option("--multi", is_flag=True, help="Start multi-agent interactive chat (echo, langgraph, crewai)")
 @click.option("--info", is_flag=True, help="Show agent information and exit")
-def main(agent_url: str, message: Optional[str], interactive: bool, info: bool) -> None:
+def main(agent_url: str, message: Optional[str], interactive: bool, multi: bool, info: bool) -> None:
     """A2A Echo Client - Interact with A2A agents.
 
     Examples:
         python client.py --info
         python client.py --message "Hello, agent!"
         python client.py --interactive
+        python client.py --multi
     """
     # Configure logging
     logging.basicConfig(
@@ -396,6 +424,15 @@ def main(agent_url: str, message: Optional[str], interactive: bool, info: bool) 
     )
 
     async def run():
+        if multi:
+            # Multi-agent interactive mode
+            agent_urls = {
+                "echo": "http://localhost:8080",
+                "langgraph": "http://localhost:8081",
+                "crewai": "http://localhost:8082",
+            }
+            await interactive_multiagent_chat(agent_urls)
+            return
         if info:
             # Show agent info
             async with A2AEchoClient(agent_url) as client:

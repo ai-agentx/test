@@ -62,10 +62,30 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    # Note: All agent types are available; use --agent-type to select. For multi-agent endpoints, see advanced usage.
    ```
 
+   Multi-agent default (no CLI args) starts three servers on consecutive ports:
+
+   - Echo: http://localhost:8080  
+   - LangGraph: http://localhost:8081  
+   - CrewAI: http://localhost:8082
+
+
 4. **Test with Client** (in another terminal):
+
    ```bash
+   # Single agent interactive (default: echo)
    python examples/run_client.py --interactive
+
+   # Multi-agent interactive (echo, langgraph, crewai)
+   python examples/run_client.py --multi
    ```
+
+   In multi-agent mode, you can switch between agents at any time:
+
+   - `/switch echo`     — switch to Echo agent (port 8080)
+   - `/switch langgraph` — switch to LangGraph agent (port 8081)
+   - `/switch crewai`    — switch to CrewAI agent (port 8082)
+
+   The prompt will show which agent is active. Type `info` to see agent details, or `quit` to exit.
 
 5. **Or run the complete demo**:
    ```bash
@@ -88,16 +108,25 @@ The Agent2Agent (A2A) Protocol is designed to enable:
    A2A_PORT=8080
    LOG_LEVEL=INFO
 
+   # Set NO_LLM=1 to force echo mode without LLM
+   NO_LLM=0
+
    # LLM Configuration
-   OPENAI_API_BASE=http://localhost:4000
+   # Use an OpenAI-compatible base; examples:
+   # - OpenAI: https://api.openai.com/v1
+   # - LiteLLM proxy: http://localhost:4000
+   # - Ollama (OpenAI-compatible): http://localhost:11434/v1
+   OPENAI_API_BASE=https://api.openai.com/v1
    OPENAI_API_KEY=your_api_key
-   OPENAI_MODEL_NAME=claude-3-sonnet
+   # Example models (depending on provider/proxy): gpt-4o-mini, gpt-3.5-turbo, llama3.1:8b, mistral-small
+   OPENAI_MODEL_NAME=gpt-4o-mini
    ```
 
 3. **Available Environment Variables:**
    - `A2A_HOST`: Server host address (default: localhost)
    - `A2A_PORT`: Server port (default: 8080)
    - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
+   - `NO_LLM`: Set to `1`/`true` to disable LLM and force echo mode (default: 0)
    - `CLIENT_TIMEOUT`: Client request timeout in seconds
    - `OPENAI_API_BASE`: Custom API endpoint (for LiteLLM, Azure, local models)
    - `OPENAI_API_KEY`: Your OpenAI API key or dummy key for LiteLLM
@@ -134,6 +163,8 @@ To run a LangGraph-powered agent that can call tools like currency conversion:
 python examples/run_server.py --agent-type langgraph
 ```
 
+Default port mapping when using multi-agent mode: LangGraph runs on 8081.
+
 ### CrewAI Agent
 
 To run a CrewAI-powered agent with a generalist assistant:
@@ -143,6 +174,8 @@ python examples/run_server.py --agent-type crewai
 # or
 python examples/run_crewai_server.py
 ```
+
+Default port mapping when using multi-agent mode: CrewAI runs on 8082.
 
 ## Agent Capabilities
 

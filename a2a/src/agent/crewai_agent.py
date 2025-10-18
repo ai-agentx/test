@@ -25,8 +25,7 @@ from a2a.types import (
 from a2a.utils import new_agent_text_message
 
 # CrewAI and LLM
-from langchain_openai import ChatOpenAI
-from crewai import Agent as CrewAgent, Task as CrewTask, Crew, Process
+from crewai import Agent as CrewAgent, Task as CrewTask, Crew, Process, LLM
 
 
 # Always load .env at import time, override existing env vars if present
@@ -55,12 +54,17 @@ class CrewAIAgent:
             self.base_agent = None
             return
 
-        llm_kwargs: Dict[str, Any] = {"api_key": api_key}
+        # Use CrewAI's LLM wrapper with provider-qualified model to ensure
+        # compatibility with OpenAI-compatible endpoints (e.g., LiteLLM/Ollama)
+        model_spec = f"openai/{model_name}"
         if api_base:
-            llm_kwargs["base_url"] = api_base
             logger.info(f"CrewAIAgent using custom API base: {api_base}")
-
-        self.llm = ChatOpenAI(model=model_name, temperature=0.2, **llm_kwargs)
+        self.llm = LLM(
+            model=model_spec,
+            api_key=api_key,
+            base_url=api_base,
+            temperature=0.2,
+        )
 
         # Define a generalist CrewAI agent
         self.base_agent = CrewAgent(
